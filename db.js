@@ -160,7 +160,7 @@ async function saveConfigToDb(config) {
       config.startedAt || null,
       config.endedAt || null,
       config.timePerQuestion || 20,
-      config.adminPassword || 'admin'
+      config.adminPassword || '7nahomawaves'
     ]);
   } catch (err) {
     console.error('[DB] saveConfigToDb error:', err.message);

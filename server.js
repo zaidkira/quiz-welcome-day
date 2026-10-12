@@ -170,7 +170,7 @@ let quizState = {
   activeQuestionIndex: 0,
   mode: 'self_paced',
   timePerQuestion: 20,
-  adminPassword: 'admin',
+  adminPassword: process.env.ADMIN_PASSWORD || '7nahomawaves',
   questions: DEFAULT_QUESTIONS,
   leaderboard: [],
   participants: {}
@@ -200,7 +200,10 @@ async function initializeDatabaseState() {
         quizState.startedAt = dbConfig.startedAt || quizState.startedAt;
         quizState.endedAt = dbConfig.endedAt || quizState.endedAt;
         quizState.timePerQuestion = dbConfig.timePerQuestion || quizState.timePerQuestion;
-        quizState.adminPassword = dbConfig.adminPassword || quizState.adminPassword;
+        quizState.adminPassword = process.env.ADMIN_PASSWORD || dbConfig.adminPassword || '7nahomawaves';
+        if (dbConfig.adminPassword !== quizState.adminPassword) {
+          await db.saveConfigToDb(quizState);
+        }
       } else {
         await db.saveConfigToDb(quizState);
       }

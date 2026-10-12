@@ -5,10 +5,10 @@
   "activeQuestionIndex": 0,
   "mode": "self_paced",
   "timePerQuestion": 20,
-  "adminPassword": "admin",
+  "adminPassword": "7nahomawaves",
   "questions": [
     {
-      "id": 1,
+      "id": 11,
       "question": "What is the primary vision of WF Club?",
       "options": [
         "Web & Future Tech",
@@ -21,7 +21,7 @@
       "explanation": ""
     },
     {
-      "id": 2,
+      "id": 12,
       "question": "Which data structure operates on a 'Last In, First Out' (LIFO) principle?",
       "options": [
         "Queue",
@@ -34,7 +34,7 @@
       "explanation": ""
     },
     {
-      "id": 3,
+      "id": 13,
       "question": "What year was the World Wide Web introduced to the public by Tim Berners-Lee?",
       "options": [
         "1985",
@@ -47,7 +47,7 @@
       "explanation": ""
     },
     {
-      "id": 4,
+      "id": 14,
       "question": "In programming, what does the acronym 'API' stand for?",
       "options": [
         "Application Programming Interface",
@@ -60,7 +60,7 @@
       "explanation": ""
     },
     {
-      "id": 5,
+      "id": 15,
       "question": "Which of the following is NOT an open-source operating system?",
       "options": [
         "Ubuntu Linux",
@@ -73,7 +73,7 @@
       "explanation": ""
     },
     {
-      "id": 6,
+      "id": 16,
       "question": "What is the primary purpose of joining our club during Open Day?",
       "options": [
         "Hands-on projects & workshops",
@@ -86,7 +86,7 @@
       "explanation": ""
     },
     {
-      "id": 7,
+      "id": 17,
       "question": "What does 'AI' stand for in modern computing?",
       "options": [
         "Automated Intelligence",
@@ -99,7 +99,7 @@
       "explanation": ""
     },
     {
-      "id": 8,
+      "id": 18,
       "question": "In web development, which language is primarily responsible for page interactivity?",
       "options": [
         "HTML",
@@ -112,7 +112,7 @@
       "explanation": ""
     },
     {
-      "id": 9,
+      "id": 19,
       "question": "What is a 'Bug' in computer programming famously named after?",
       "options": [
         "A real moth trapped in a relay of the Mark II computer in 1947",
@@ -125,7 +125,7 @@
       "explanation": ""
     },
     {
-      "id": 10,
+      "id": 20,
       "question": "What is the best way to level up your tech skills this semester?",
       "options": [
         "Watching random tutorials alone without coding",
