@@ -292,6 +292,19 @@ function handleServerMessage(msg) {
       renderLeaderboard();
       renderAdminDashboard();
 
+      // If leaderboard was cleared by organizer
+      if (state.leaderboard.length === 0) {
+        state.player.score = 0;
+        state.player.completed = false;
+        state.player.started = false;
+        state.player.answers = [];
+        state.player.currentQIndex = 0;
+        const resultScreen = document.getElementById('quiz-screen-result');
+        if (resultScreen && resultScreen.style.display === 'block') {
+          showQuizSubscreen(state.status === 'active' ? 'join' : 'waiting');
+        }
+      }
+
       // If a new player just claimed 1st place!
       const newTop = state.leaderboard[0];
       if (newTop && newTop.id !== prevTopId && state.leaderboard.length > 0) {
@@ -488,8 +501,15 @@ function handleStatusChangeReaction() {
     }
   } else if (state.status === 'not_started') {
     state.hasCelebratedEnd = false;
-    if (state.player.registered && !state.player.completed) {
+    state.player.completed = false;
+    state.player.started = false;
+    state.player.score = 0;
+    state.player.answers = [];
+    state.player.currentQIndex = 0;
+    if (state.player.registered) {
       showQuizSubscreen('waiting');
+    } else {
+      showQuizSubscreen('join');
     }
   }
 }
@@ -1079,6 +1099,7 @@ async function handleAdminLogin(e) {
       state.admin.isLoggedIn = true;
       state.admin.password = password;
       state.admin.questionsCache = data.questions;
+      sessionStorage.setItem('admin_pwd', password);
 
       document.getElementById('admin-login-view').style.display = 'none';
       document.getElementById('admin-dashboard-view').style.display = 'block';
@@ -1098,6 +1119,7 @@ function handleAdminLogout() {
   SoundFX.click();
   state.admin.isLoggedIn = false;
   state.admin.password = '';
+  sessionStorage.removeItem('admin_pwd');
   document.getElementById('admin-login-view').style.display = 'block';
   document.getElementById('admin-dashboard-view').style.display = 'none';
   showToast('Logged out of Admin Panel.', '🔒');
@@ -1105,35 +1127,64 @@ function handleAdminLogout() {
 
 async function sendAdminAction(action, payload = null) {
   SoundFX.click();
-  if (!state.admin.isLoggedIn) return;
 
-  const msg = {
-    type: 'ADMIN_ACTION',
-    password: state.admin.password,
-    action,
-    payload
-  };
-
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    sendWs(msg);
-  } else {
-    try {
-      const res = await fetch('/api/admin/action', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: state.admin.password, action, payload })
-      });
-      if (res.ok) {
-        showToast(`Action executed: ${action}`, '✅');
-        fetchStateREST();
-        refreshAdminData();
-      }
-    } catch (e) {
-      showToast('Failed to execute admin action', '⚠️');
+  let password = state.admin.password || sessionStorage.getItem('admin_pwd');
+  if (!password) {
+    password = prompt('Enter Admin Password (Default: 7nahomawaves):');
+    if (!password) {
+      showToast('Action cancelled: Admin key required', '🔒');
+      return;
     }
   }
-}
 
+  try {
+    // 1. Always execute through reliable HTTP endpoint
+    const res = await fetch('/api/admin/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password, action, payload })
+    });
+
+    const data = await res.json();
+    if (res.ok && data.success) {
+      state.admin.isLoggedIn = true;
+      state.admin.password = password;
+      sessionStorage.setItem('admin_pwd', password);
+
+      showToast(`Action executed: ${action.replace(/_/g, ' ')}`, '✅');
+
+      if (action === 'CLEAR_LEADERBOARD') {
+        state.leaderboard = [];
+        state.player.score = 0;
+        state.player.completed = false;
+        state.player.started = false;
+        state.player.answers = [];
+        state.player.currentQIndex = 0;
+        renderLeaderboard();
+        renderAdminDashboard();
+      }
+
+      // 2. Also broadcast through WebSocket if connected
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        sendWs({
+          type: 'ADMIN_ACTION',
+          password,
+          action,
+          payload
+        });
+      }
+
+      fetchStateREST();
+      refreshAdminData();
+    } else {
+      SoundFX.wrong();
+      showToast(data.error || 'Failed to execute admin action', '❌');
+    }
+  } catch (err) {
+    console.error('sendAdminAction error:', err);
+    showToast('Network error executing admin action', '⚠️');
+  }
+}
 
 function confirmClearLeaderboard() {
   if (confirm('Are you sure you want to delete all participant submissions from the leaderboard?')) {
@@ -1538,6 +1589,32 @@ window.addEventListener('DOMContentLoaded', () => {
   confetti.init();
   connectWebSocket();
   fetchStateREST();
+
+  // Restore active admin session if previously unlocked
+  const savedAdminPwd = sessionStorage.getItem('admin_pwd');
+  if (savedAdminPwd) {
+    fetch('/api/admin/state', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: savedAdminPwd })
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data) {
+          state.admin.isLoggedIn = true;
+          state.admin.password = savedAdminPwd;
+          state.admin.questionsCache = data.questions;
+          const loginView = document.getElementById('admin-login-view');
+          const dashView = document.getElementById('admin-dashboard-view');
+          if (loginView && dashView) {
+            loginView.style.display = 'none';
+            dashView.style.display = 'block';
+            renderAdminDashboard(data);
+          }
+        }
+      })
+      .catch(() => {});
+  }
 
   // 100% Live Scoreboard auto-sync polling every 2.5 seconds
   setInterval(() => {
