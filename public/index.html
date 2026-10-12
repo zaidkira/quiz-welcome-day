@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WF Club • Open Day Quiz & Live Leaderboard</title>
+  <meta name="description" content="Official Open Day tech trivia challenge by WF Club. Test your knowledge, climb the live leaderboard, and win club prizes.">
+  <link rel="icon" type="image/png" href="logo.png">
+  
+  <!-- Modern clean typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Ambient background depth -->
+  <div class="ambient-glow"></div>
+  <canvas id="confetti-canvas"></canvas>
+
+  <!-- Navigation Bar -->
+  <header class="app-header">
+    <div class="brand-section">
+      <div class="brand-logo-wrap">
+        <img src="logo.png" alt="WF Club Logo" class="brand-logo-img">
+      </div>
+      <div class="brand-text">
+        <div class="brand-title-row">
+          <span class="brand-name">WF CLUB</span>
+          <span class="badge-tag">OPEN DAY 2026</span>
+        </div>
+        <p class="brand-sub">Student Tech & Innovation Club</p>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs" aria-label="Main Navigation">
+      <button class="tab-btn active" id="tab-quiz" onclick="switchView('quiz')">
+        <span class="tab-icon">🎯</span> Play Quiz
+      </button>
+      <button class="tab-btn" id="tab-board" onclick="switchView('board')">
+        <span class="tab-icon">🏆</span> Live Leaderboard
+      </button>
+      <button class="tab-btn" id="tab-admin" onclick="switchView('admin')">
+        <span class="tab-icon">⚙️</span> Organizer Admin
+      </button>
+    </nav>
+
+    <!-- Header Actions -->
+    <div class="header-actions">
+      <div id="quiz-status-pill" class="status-badge not_started">
+        <span id="quiz-status-text">STANDBY</span>
+      </div>
+
+      <button id="sfx-toggle-btn" class="icon-btn" title="Toggle Sound FX" onclick="toggleAudio()">
+        🔊
+      </button>
+
+      <button id="fullscreen-btn" class="icon-btn" title="Projector Fullscreen" onclick="toggleFullscreen()">
+        ⛶
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="main-container">
+
+    <!-- ==============================================
+         1. PARTICIPANT VIEW
+         ============================================== -->
+    <section id="view-quiz" class="view-section active">
+      <div class="quiz-wrapper">
+
+        <!-- 1.A: Join / Registration Screen -->
+        <div id="quiz-screen-join" class="studio-card">
+          <div class="join-hero">
+            <img src="logo.png" alt="WF Club" class="join-logo-badge">
+            <span class="pill-label">OPEN DAY BOOTH CHALLENGE</span>
+            <h2 class="hero-title">Test Your Tech Knowledge</h2>
+            <p class="hero-desc">10 rapid-fire questions on web, code & tech trivia. Answer fast for speed points and grab top spot on the booth screen!</p>
+          </div>
+
+          <form id="join-form" onsubmit="handleJoinQuiz(event)">
+            <label class="field-label">Select Your Role / Avatar</label>
+            <div class="avatar-grid" id="avatar-grid">
+              <div class="avatar-option selected" data-avatar="💻" title="Developer">💻 <span class="avatar-label">Dev</span></div>
+              <div class="avatar-option" data-avatar="⚡" title="Fast Coder">⚡ <span class="avatar-label">Hacker</span></div>
+              <div class="avatar-option" data-avatar="🎨" title="Designer">🎨 <span class="avatar-label">Design</span></div>
+              <div class="avatar-option" data-avatar="🤖" title="Robotics / AI">🤖 <span class="avatar-label">AI / Bot</span></div>
+              <div class="avatar-option" data-avatar="🛡️" title="Cybersecurity">🛡️ <span class="avatar-label">Cyber</span></div>
+              <div class="avatar-option" data-avatar="🚀" title="Founder">🚀 <span class="avatar-label">Founder</span></div>
+            </div>
+
+            <div class="input-group">
+              <label for="player-name-input" class="field-label">Your Name or Handle</label>
+              <input type="text" id="player-name-input" class="studio-input" placeholder="e.g. Alex, Maya, Karim..." maxlength="25" required autofocus autocomplete="off">
+            </div>
+
+            <button type="submit" class="studio-btn btn-primary" id="btn-enter-quiz">
+              <span>Join Quiz Round →</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- 1.B: Waiting Room (Shown if round not started) -->
+        <div id="quiz-screen-waiting" class="studio-card" style="display:none;">
+          <div class="waiting-box">
+            <div class="wf-wave-visualizer">
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+              <span class="wave-bar"></span>
+            </div>
+
+            <h3 class="waiting-heading">You're in, <span id="waiting-player-name" style="color:var(--accent-cyan)">Player</span>!</h3>
+            <p class="waiting-sub">Waiting for the booth organizer to launch this round. When the quiz starts, question 1 will appear right on your screen.</p>
+
+            <div class="pro-tip-banner">
+              <span class="pro-tip-tag">TIP</span>
+              <p>Points depend on both correctness and how fast you answer. Don't second-guess too long!</p>
+            </div>
+
+            <div style="margin-top:28px;">
+              <button class="studio-btn btn-outline" onclick="switchView('board')">
+                <span>View Live Leaderboard Screen</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 1.C: Active Quiz Screen (10 Questions, 4 Options) -->
+        <div id="quiz-screen-active" class="studio-card" style="display:none;">
+          <div class="quiz-status-bar">
+            <div class="meta-pill">
+              <span class="meta-label">QUESTION</span>
+              <span class="meta-value"><span id="q-current-idx">1</span> / <span id="q-total-count">10</span></span>
+            </div>
+
+            <div id="q-timer-pill" class="meta-pill timer">
+              <span class="meta-label">TIME</span>
+              <span class="meta-value font-mono"><span id="q-time-left">20</span>s</span>
+            </div>
+
+            <div class="meta-pill score">
+              <span class="meta-label">SCORE</span>
+              <span class="meta-value font-mono" id="q-player-score">0</span>
+            </div>
+          </div>
+
+          <!-- Progress Bar -->
+          <div class="progress-track">
+            <div id="q-progress-fill" class="progress-fill" style="width: 10%;"></div>
+          </div>
+
+          <!-- Question Content -->
+          <h3 id="q-question-text" class="question-title">Loading question...</h3>
+
+          <!-- 4 Options Grid -->
+          <div class="options-grid" id="q-options-container">
+            <!-- Injected Option Buttons -->
+          </div>
+
+          <!-- Explanation box -->
+          <div id="q-explanation-box" class="explanation-box" style="display:none;">
+            <span class="exp-icon">💡</span>
+            <div id="q-explanation-text"></div>
+          </div>
+        </div>
+
+        <!-- 1.D: Quiz Results Screen -->
+        <div id="quiz-screen-result" class="studio-card" style="display:none;">
+          <div class="results-hero">
+            <div class="results-badge">ROUND COMPLETE</div>
+            <h2 class="hero-title">Great Run!</h2>
+            <p class="hero-desc">Your results have been submitted to the live booth leaderboard.</p>
+          </div>
+
+          <div class="stats-row">
+            <div class="stat-box">
+              <span class="stat-num font-mono" id="res-score">0</span>
+              <span class="stat-caption">Total Points</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-num font-mono" id="res-correct">0/10</span>
+              <span class="stat-caption">Accuracy</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-num font-mono" id="res-time">0s</span>
+              <span class="stat-caption">Total Time</span>
+            </div>
+          </div>
+
+          <div class="rank-callout" id="res-rank-banner">
+            <div class="rank-badge-big font-mono" id="res-rank-num">#1</div>
+            <div class="rank-text">
+              <h4>Booth Standing</h4>
+              <p id="res-rank-note">Check the live display screen at the stand to see your position!</p>
+            </div>
+          </div>
+
+          <!-- Answers Review -->
+          <div style="margin-bottom:20px;">
+            <button class="studio-btn btn-outline" style="width:100%;" onclick="toggleAnswerReview()">
+              <span>Review Questions & Solutions ▼</span>
+            </button>
+            <div id="answers-review-container" style="display:none; margin-top:14px;"></div>
+          </div>
+
+          <div style="display:flex; gap:12px; flex-wrap:wrap;">
+            <button class="studio-btn btn-primary" onclick="switchView('board')" style="flex:1;">
+              <span>See Live Leaderboard</span>
+            </button>
+            <button class="studio-btn btn-outline" onclick="restartParticipantQuiz()" style="flex:1;">
+              <span>Play Again</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ==============================================
+         2. LIVE LEADERBOARD / BIG SCREEN VIEW
+         ============================================== -->
+    <section id="view-board" class="view-section">
+      <div class="board-container">
+
+        <div class="board-top-bar">
+          <div>
+            <div class="badge-tag" style="margin-bottom:6px;">LIVE ARENA STANDINGS</div>
+            <h2 class="board-title">Open Day Live Leaderboard</h2>
+            <p class="board-desc">Real-time scores & fastest times from visitors at the WF Club booth.</p>
+          </div>
+          <div class="board-live-pill">
+            <span class="arena-tag">BROADCAST</span> REAL-TIME SYNC
+          </div>
+        </div>
+
+        <!-- Join Banner with QR Code -->
+        <div class="join-banner-box">
+          <div class="qr-col">
+            <img id="board-qr-img" src="" alt="Scan QR Code" class="qr-code-img" style="display:none;">
+          </div>
+          <div class="qr-desc-col">
+            <span class="sub-label">SCAN WITH YOUR PHONE TO COMPETE</span>
+            <h3>Want to challenge the high score?</h3>
+            <p>Scan the QR code or enter this address in your mobile browser:</p>
+            <span id="board-join-url" class="url-badge font-mono">Loading URL...</span>
+          </div>
+          <div class="qr-count-col">
+            <span class="participant-count-badge" id="board-participant-count">0 Players</span>
+            <button class="studio-btn btn-outline" style="padding:8px 14px; font-size:0.85rem;" onclick="refreshLeaderboard()">
+              ↻ Refresh
+            </button>
+          </div>
+        </div>
+
+        <!-- Top 3 Podium -->
+        <div class="podium-row" id="podium-section">
+          <!-- 2nd Place -->
+          <div class="podium-pillar rank-2" id="podium-2">
+            <div class="pillar-card">
+              <span class="medal-tag silver">2ND PLACE</span>
+              <div class="pillar-avatar" id="podium-avatar-2">⚡</div>
+              <div class="pillar-name" id="podium-name-2">Waiting...</div>
+              <div class="pillar-score font-mono" id="podium-score-2">-- pts</div>
+            </div>
+          </div>
+
+          <!-- 1st Place -->
+          <div class="podium-pillar rank-1" id="podium-1">
+            <div class="pillar-card">
+              <span class="medal-tag gold">👑 1ST CHAMPION</span>
+              <div class="pillar-avatar" id="podium-avatar-1">💻</div>
+              <div class="pillar-name" id="podium-name-1">Waiting...</div>
+              <div class="pillar-score font-mono" id="podium-score-1">-- pts</div>
+            </div>
+          </div>
+
+          <!-- 3rd Place -->
+          <div class="podium-pillar rank-3" id="podium-3">
+            <div class="pillar-card">
+              <span class="medal-tag bronze">3RD PLACE</span>
+              <div class="pillar-avatar" id="podium-avatar-3">🎨</div>
+              <div class="pillar-name" id="podium-name-3">Waiting...</div>
+              <div class="pillar-score font-mono" id="podium-score-3">-- pts</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Full Leaderboard Table -->
+        <div class="table-container">
+          <table class="leaderboard-table">
+            <thead>
+              <tr>
+                <th style="width: 70px;">Rank</th>
+                <th>Participant</th>
+                <th style="text-align: right;">Points</th>
+                <th style="text-align: center;">Accuracy</th>
+                <th style="text-align: right;">Time</th>
+              </tr>
+            </thead>
+            <tbody id="leaderboard-tbody">
+              <!-- Dynamic player rows -->
+            </tbody>
+          </table>
+
+          <div id="empty-board-msg" class="empty-state">
+            <div class="empty-icon">🎮</div>
+            <h4>Leaderboard is Clean & Ready</h4>
+            <p>No submissions yet. Be the first visitor to complete the quiz and take #1!</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ==============================================
+         3. ORGANIZER ADMIN PANEL
+         ============================================== -->
+    <section id="view-admin" class="view-section">
+      <div class="admin-container">
+
+        <!-- Admin Authentication Form -->
+        <div id="admin-login-view" class="studio-card admin-login-card">
+          <div class="badge-tag" style="margin-bottom:12px;">ORGANIZER ACCESS</div>
+          <h2 class="hero-title">Admin Authentication</h2>
+          <p class="hero-desc" style="margin-bottom:20px;">Enter your admin key to control quiz rounds, configure questions, and manage submissions.</p>
+
+          <form onsubmit="handleAdminLogin(event)">
+            <div class="input-group">
+              <label class="field-label">Admin Key (Default: <code>admin</code>)</label>
+              <input type="password" id="admin-password-input" class="studio-input" placeholder="Enter admin password" required>
+            </div>
+            <button type="submit" class="studio-btn btn-primary" style="width:100%;">
+              <span>Unlock Admin Panel →</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- Admin Dashboard View -->
+        <div id="admin-dashboard-view" style="display:none;">
+
+          <div class="admin-top-bar">
+            <div>
+              <div class="badge-tag">CLUB ORGANIZER CONSOLE</div>
+              <h2 class="hero-title" style="font-size:1.8rem; margin-top:4px;">Booth Operations & Control</h2>
+            </div>
+            <button class="studio-btn btn-outline" style="width:auto; padding:8px 16px;" onclick="handleAdminLogout()">
+              Lock Session
+            </button>
+          </div>
+
+          <!-- Session Controls -->
+          <div class="action-grid">
+            <div class="action-card">
+              <div class="action-info">
+                <h4>Start Quiz Round</h4>
+                <p>Opens the quiz and lets visitors start answering.</p>
+              </div>
+              <button class="studio-btn btn-success" onclick="sendAdminAction('START_QUIZ')">
+                ▶ Start Round
+              </button>
+            </div>
+
+            <div class="action-card">
+              <div class="action-info">
+                <h4>End Quiz Round</h4>
+                <p>Locks submissions and freezes final scores.</p>
+              </div>
+              <button class="studio-btn btn-danger" onclick="sendAdminAction('END_QUIZ')">
+                ⏹ End Round
+              </button>
+            </div>
+
+            <div class="action-card">
+              <div class="action-info">
+                <h4>Reset Session</h4>
+                <p>Re-opens waiting room for the next round of visitors.</p>
+              </div>
+              <button class="studio-btn btn-warning" onclick="sendAdminAction('RESET_QUIZ')">
+                ↺ Reset to Waiting
+              </button>
+            </div>
+
+            <div class="action-card">
+              <div class="action-info">
+                <h4>Clear Leaderboard</h4>
+                <p>Cleans all submissions to start fresh.</p>
+              </div>
+              <button class="studio-btn btn-danger-outline" onclick="confirmClearLeaderboard()">
+                🗑 Clear Scores
+              </button>
+            </div>
+          </div>
+
+          <!-- Admin Quick Stats -->
+          <div class="stats-row" style="margin-bottom:28px;">
+            <div class="stat-box">
+              <span class="stat-num" id="admin-stat-status" style="font-size:1.15rem; text-transform:uppercase;">Not Started</span>
+              <span class="stat-caption">Status</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-num font-mono" id="admin-stat-players">0</span>
+              <span class="stat-caption">Submissions</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-num" id="admin-stat-top" style="font-size:1.15rem;">None</span>
+              <span class="stat-caption">Current #1</span>
+            </div>
+          </div>
+
+          <!-- Supabase Database Integration Card -->
+          <div class="studio-card" style="margin-bottom:28px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+              <div>
+                <h3 style="font-size:1.25rem; font-weight:700; display:flex; align-items:center; gap:8px;">
+                  <span>🐘 Supabase PostgreSQL Database</span>
+                  <span id="db-status-badge" class="status-badge not_started">Checking...</span>
+                </h3>
+                <p style="color:var(--text-muted); font-size:0.85rem; margin-top:2px;">
+                  Endpoint: <code class="font-mono" style="color:var(--accent-cyan)">aws-1-eu-central-1.pooler.supabase.com:6543</code> | User: <code class="font-mono">postgres.bzaxtopopollapplqyhv</code>
+                </p>
+              </div>
+            </div>
+
+            <div class="db-connect-box">
+              <p style="font-size:0.9rem; color:#cbd5e1; margin-bottom:10px;">
+                Paste your Supabase database password below to activate live cloud persistence for questions and scores:
+              </p>
+              <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <input type="password" id="db-password-input" class="studio-input" placeholder="Enter Supabase database password" style="flex:1; min-width:240px; padding:10px 14px;">
+                <button class="studio-btn btn-primary" style="width:auto; padding:10px 20px;" onclick="connectSupabaseDb()">
+                  <span>Connect & Sync Supabase</span>
+                </button>
+              </div>
+              <div id="db-feedback-msg" style="margin-top:8px; font-size:0.85rem; color:var(--text-muted);"></div>
+            </div>
+          </div>
+
+          <!-- Question Manager -->
+          <div class="studio-card" style="margin-bottom:28px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
+              <div>
+                <h3 style="font-size:1.35rem; font-weight:700;">Question Manager (<span id="admin-q-count">10</span> Questions)</h3>
+                <p style="color:var(--text-muted); font-size:0.85rem;">Edit questions, change choices, and select the correct answer.</p>
+              </div>
+              <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button class="studio-btn btn-outline" style="width:auto; padding:8px 14px; font-size:0.85rem;" onclick="addNewQuestion()">
+                  + Add Question
+                </button>
+                <button class="studio-btn btn-outline" style="width:auto; padding:8px 14px; font-size:0.85rem;" onclick="resetDefaultQuestions()">
+                  ↺ Reset Defaults
+                </button>
+                <button class="studio-btn btn-primary" style="width:auto; padding:8px 18px; font-size:0.85rem;" onclick="saveQuestionsToAdmin()">
+                  Save All Changes
+                </button>
+              </div>
+            </div>
+
+            <div id="admin-questions-accordion">
+              <!-- Injected question editors -->
+            </div>
+          </div>
+
+          <!-- Submissions Management -->
+          <div class="studio-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+              <div>
+                <h3 style="font-size:1.35rem; font-weight:700;">Participants & Submissions</h3>
+                <p style="color:var(--text-muted); font-size:0.85rem;">Manage entries or export to spreadsheet for prize handouts.</p>
+              </div>
+              <div style="display:flex; gap:10px;">
+                <button class="studio-btn btn-outline" style="width:auto; padding:8px 14px; font-size:0.85rem;" onclick="exportLeaderboardCSV()">
+                  Export CSV
+                </button>
+              </div>
+            </div>
+
+            <div class="table-container" style="border:none; padding:0;">
+              <table class="leaderboard-table">
+                <thead>
+                  <tr>
+                    <th>Rank</th>
+                    <th>Participant</th>
+                    <th>Score</th>
+                    <th>Accuracy</th>
+                    <th>Time</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-submissions-tbody">
+                  <!-- Injected rows -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <div id="toast-container" class="toast-container"></div>
+  <script src="app.js"></script>
+</body>
+</html>
