@@ -40,7 +40,8 @@ const state = {
   audioEnabled: true,
   currentView: 'quiz',
   timerInterval: null,
-  timeLeft: 20
+  timeLeft: 20,
+  hasCelebratedEnd: false
 };
 
 // ===================================================
@@ -450,23 +451,48 @@ function renderQuestionsCount() {
   }
 }
 
-// React to quiz status transitions (e.g. admin starts quiz)
+// React to quiz status transitions (e.g. admin starts or ends quiz)
 function handleStatusChangeReaction() {
-  // Only trigger starting questions if player registered, was in waiting room, and hasn't started yet!
-  if (state.player.registered && !state.player.started && !state.player.completed) {
-    if (state.status === 'active') {
+  // Update Leaderboard Concluded banner
+  const boardBanner = document.getElementById('board-ended-banner');
+  if (boardBanner) {
+    boardBanner.style.display = state.status === 'ended' ? 'flex' : 'none';
+  }
+
+  if (state.status === 'ended') {
+    // 1. Stop question timer immediately for all active players
+    clearInterval(state.timerInterval);
+
+    // 2. If player is registered and has not finished viewing their own result, show Round Ended screen
+    if (state.player.registered && !state.player.completed) {
+      state.player.started = false;
+      showQuizSubscreen('ended');
+      showToast('This quiz round has ended! Submissions are locked.', '🏁');
+    }
+
+    // 3. Trigger celebratory winner fanfare and confetti on Leaderboard
+    if (!state.hasCelebratedEnd) {
+      state.hasCelebratedEnd = true;
+      confetti.burst(160);
+      SoundFX.fanfare();
+    }
+  } else if (state.status === 'active') {
+    state.hasCelebratedEnd = false;
+    // If player is registered and in waiting room, and quiz just started
+    if (state.player.registered && !state.player.started && !state.player.completed) {
       startParticipantQuizQuestions();
-    } else if (state.status === 'not_started') {
+    }
+  } else if (state.status === 'not_started') {
+    state.hasCelebratedEnd = false;
+    if (state.player.registered && !state.player.completed) {
       showQuizSubscreen('waiting');
     }
-  } else if (state.player.registered && state.status === 'ended' && !state.player.completed) {
-    showToast('The Admin has closed this quiz session.', '🛑');
   }
 }
 
 // Show internal screen inside Participant Quiz view
 function showQuizSubscreen(screenName) {
-  const screens = ['join', 'waiting', 'active', 'result'];
+  const screens = ['join', 'waiting', 'active', 'result', 'ended'];
   screens.forEach(s => {
     const el = document.getElementById(`quiz-screen-${s}`);
     if (el) el.style.display = s === screenName ? 'block' : 'none';

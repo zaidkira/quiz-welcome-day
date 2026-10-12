@@ -541,7 +541,7 @@ app.post('/api/admin/action', async (req, res) => {
 app.post('/api/submit', async (req, res) => {
   const { name, avatar, answers, durations, totalTimeSec } = req.body;
   if (quizState.status !== 'active') {
-    return res.status(400).json({ error: 'Quiz is not active.' });
+    return res.status(400).json({ error: 'This quiz round has ended. Submissions are now closed! Check the live leaderboard for final standings.' });
   }
   if (!name || !Array.isArray(answers)) {
     return res.status(400).json({ error: 'Invalid submission data.' });

@@ -225,6 +225,21 @@
           </div>
         </div>
 
+        <!-- 1.E: Quiz Round Ended Screen (Shown when Admin ends session) -->
+        <div id="quiz-screen-ended" class="studio-card" style="display:none; text-align:center;">
+          <div style="font-size:3.5rem; margin-bottom:14px;">🏁</div>
+          <span class="status-badge ended" style="margin-bottom:16px;">ROUND CONCLUDED</span>
+          <h2 class="hero-title" style="margin-bottom:12px;">This Quiz Round Has Ended!</h2>
+          <p class="hero-desc" style="max-width:520px; margin:0 auto 28px;">
+            The booth organizer has officially closed submissions for this round. Check the Live Leaderboard screen to discover the top scorers, podium winners, and claim prizes!
+          </p>
+          <div style="display:flex; justify-content:center; gap:14px; flex-wrap:wrap;">
+            <button class="studio-btn btn-primary" style="padding:14px 28px; font-size:1.05rem;" onclick="switchView('board')">
+              <span>🏆 View Winners on Leaderboard →</span>
+            </button>
+          </div>
+        </div>
+
       </div>
     </section>
 
@@ -244,6 +259,16 @@
           <div class="board-live-pill">
             <span class="arena-tag">BROADCAST</span> REAL-TIME SYNC
           </div>
+        </div>
+
+        <!-- Concluded Banner on Leaderboard -->
+        <div id="board-ended-banner" class="board-ended-banner" style="display:none;">
+          <span style="font-size:1.5rem;">👑</span>
+          <div>
+            <strong>QUIZ ROUND CONCLUDED — WINNERS FINALIZED!</strong>
+            <p style="margin:0; font-size:0.85rem; opacity:0.9;">Congratulations to our Open Day champions on the podium!</p>
+          </div>
+          <span style="font-size:1.5rem;">🎉</span>
         </div>
 
         <!-- Join Banner with QR Code -->
