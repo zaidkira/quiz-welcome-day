@@ -252,14 +252,16 @@ function broadcast(data) {
   });
 }
 
-// Client sanitized questions (hide correct answers from players)
+// Client questions (includes correctAnswer & explanation for end-of-question validation & feedback)
 function getSanitizedQuestions() {
   return quizState.questions.map(q => ({
     id: q.id,
     question: q.question,
     options: q.options,
     timeLimit: q.timeLimit || quizState.timePerQuestion,
-    isDoublePoints: !!q.isDoublePoints
+    isDoublePoints: !!q.isDoublePoints,
+    correctAnswer: q.correctAnswer,
+    explanation: q.explanation || ''
   }));
 }
 
@@ -456,7 +458,8 @@ async function executeAdminAction(action, payload) {
           options: Array.isArray(q.options) ? q.options.map(o => String(o).trim()) : ['A', 'B', 'C', 'D'],
           correctAnswer: Number(q.correctAnswer) || 0,
           timeLimit: Number(q.timeLimit) || 20,
-          explanation: (q.explanation || '').trim()
+          explanation: (q.explanation || '').trim(),
+          isDoublePoints: !!q.isDoublePoints
         }));
         saveLocalState();
         await db.saveQuestionsToDb(quizState.questions);

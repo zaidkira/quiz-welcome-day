@@ -462,6 +462,10 @@ function handleStatusChangeReaction() {
   if (state.status === 'ended') {
     // 1. Stop question timer immediately for all active players
     clearInterval(state.timerInterval);
+    if (state.advanceTimeout) {
+      clearTimeout(state.advanceTimeout);
+      state.advanceTimeout = null;
+    }
 
     // 2. If player is registered and has not finished viewing their own result, show Round Ended screen
     if (state.player.registered && !state.player.completed) {
@@ -568,6 +572,12 @@ function renderCurrentQuestion() {
     return;
   }
 
+  // Clear any existing advance timer
+  if (state.advanceTimeout) {
+    clearTimeout(state.advanceTimeout);
+    state.advanceTimeout = null;
+  }
+
   const qIndex = state.player.currentQIndex;
   if (qIndex >= qList.length) {
     submitParticipantQuiz();
@@ -591,6 +601,14 @@ function renderCurrentQuestion() {
   const doubleBanner = document.getElementById('q-double-banner');
   if (doubleBanner) {
     doubleBanner.style.display = currentQ.isDoublePoints ? 'inline-flex' : 'none';
+  }
+
+  // Reset Lock Status Badge
+  const lockStatus = document.getElementById('q-lock-status');
+  if (lockStatus) {
+    lockStatus.style.display = 'none';
+    lockStatus.className = 'lock-status-badge';
+    lockStatus.innerHTML = '';
   }
 
   // Hide explanation box
@@ -643,67 +661,158 @@ function startQuestionTimer(seconds) {
 
     if (state.timeLeft <= 0) {
       clearInterval(state.timerInterval);
-      // Auto advance on timeout
-      handleQuestionTimeout();
+      // Advance ONLY when timer finishes!
+      handleQuestionTimerEnd();
     }
   }, 1000);
 }
 
-function handleQuestionTimeout() {
-  // If no answer selected, record -1
-  selectOption(-1, true);
-}
-
-function selectOption(optIndex, isTimeout = false) {
-  clearInterval(state.timerInterval);
-
-  // Disable all options buttons to prevent double-clicks
-  const buttons = document.querySelectorAll('.option-btn');
-  buttons.forEach(b => b.disabled = true);
-
+// When participant clicks an answer:
+// Lock their choice and prevent changing, but DO NOT advance to next question until time runs out!
+function selectOption(optIndex) {
   const qIndex = state.player.currentQIndex;
+  // If already locked in for this question, ignore
+  if (state.player.answers[qIndex] !== undefined) return;
+
   const currentQ = state.questions[qIndex];
+  if (!currentQ) return;
+
   const startTime = state.player.questionStartTimes[qIndex] || Date.now();
   const durationSec = Math.max(1, Math.round((Date.now() - startTime) / 1000));
   state.player.questionDurations[qIndex] = durationSec;
   state.player.answers[qIndex] = optIndex;
 
-  const timeLimit = (currentQ && currentQ.timeLimit) || state.timePerQuestion || 20;
+  // Disable all options buttons to lock their answer
+  const buttons = document.querySelectorAll('.option-btn');
+  buttons.forEach(b => b.disabled = true);
 
-  if (optIndex >= 0) {
-    SoundFX.select();
-    const selectedBtn = document.getElementById(`option-btn-${optIndex}`);
-    if (selectedBtn) selectedBtn.classList.add('selected');
+  // Visually highlight the chosen option as locked
+  const selectedBtn = document.getElementById(`option-btn-${optIndex}`);
+  if (selectedBtn) selectedBtn.classList.add('selected');
 
-    // Dynamic live score calculation & micro-feedback
-    const isDouble = !!(currentQ && currentQ.isDoublePoints);
-    const multiplier = isDouble ? 2 : 1;
-    const speedRatio = Math.max(0, (timeLimit - durationSec) / timeLimit);
-    const pts = Math.round((500 + 500 * speedRatio) * multiplier);
+  SoundFX.select();
+
+  // Show locked status badge
+  const lockStatus = document.getElementById('q-lock-status');
+  if (lockStatus) {
+    lockStatus.className = 'lock-status-badge';
+    lockStatus.innerHTML = `<span>🔒</span> Answer locked in! Waiting for timer to end...`;
+    lockStatus.style.display = 'flex';
+  }
+
+  showToast('🔒 Choice locked in! Timer will finish before moving to next question.', '⏳');
+}
+
+// Evaluates question score strictly when time expires (state.timeLeft <= 0)
+function handleQuestionTimerEnd() {
+  clearInterval(state.timerInterval);
+
+  const qIndex = state.player.currentQIndex;
+  const currentQ = state.questions[qIndex];
+  if (!currentQ) return;
+
+  // Disable all options buttons
+  const buttons = document.querySelectorAll('.option-btn');
+  buttons.forEach(b => b.disabled = true);
+
+  const timeLimit = currentQ.timeLimit || state.timePerQuestion || 20;
+
+  // If no answer selected before time ran out, record -1
+  if (state.player.answers[qIndex] === undefined) {
+    state.player.answers[qIndex] = -1;
+    state.player.questionDurations[qIndex] = timeLimit;
+  }
+
+  const chosen = state.player.answers[qIndex];
+  const durationSec = state.player.questionDurations[qIndex] || timeLimit;
+  const isDouble = !!currentQ.isDoublePoints;
+  const multiplier = isDouble ? 2 : 1;
+
+  // ONLY the correct answer earns points!
+  const isCorrect = (chosen >= 0 && chosen === currentQ.correctAnswer);
+  const lockStatus = document.getElementById('q-lock-status');
+
+  if (isCorrect) {
+    // Correct answer! Speed-based bonus points (Kahoot-style)
+    const clampedDuration = Math.max(0.5, Math.min(timeLimit, durationSec));
+    const speedRatio = Math.max(0, (timeLimit - clampedDuration) / timeLimit);
+    const basePoints = 500;
+    const speedBonus = Math.round(500 * speedRatio);
+    const pts = (basePoints + speedBonus) * multiplier;
 
     state.player.score += pts;
     const scoreEl = document.getElementById('q-player-score');
     if (scoreEl) scoreEl.textContent = state.player.score;
 
-    if (isDouble) {
-      showToast(`🔥 +${pts} pts (2X DOUBLE POINTS!)`, '⚡');
-    } else if (speedRatio >= 0.5) {
-      showToast(`⚡ +${pts} pts (Fast Answer: ${durationSec}s!)`, '🎯');
+    const chosenBtn = document.getElementById(`option-btn-${chosen}`);
+    if (chosenBtn) {
+      chosenBtn.classList.remove('selected');
+      chosenBtn.classList.add('correct');
+    }
+
+    SoundFX.fanfare();
+    const bonusText = isDouble ? ' (2X DOUBLE POINTS!)' : ` (${durationSec}s speed)`;
+    showToast(`✅ Correct! +${pts} pts${bonusText}`, '🎯');
+
+    if (lockStatus) {
+      lockStatus.className = 'lock-status-badge correct';
+      lockStatus.innerHTML = `<span>✅</span> Correct Answer! +${pts} pts earned!`;
+      lockStatus.style.display = 'flex';
     }
   } else {
+    // Wrong answer OR timeout! Exactly 0 points earned!
     SoundFX.wrong();
-    showToast("⏰ Time's up for this question!", '⌛');
+
+    if (chosen >= 0) {
+      const chosenBtn = document.getElementById(`option-btn-${chosen}`);
+      if (chosenBtn) {
+        chosenBtn.classList.remove('selected');
+        chosenBtn.classList.add('wrong');
+      }
+      showToast('❌ Wrong answer! (+0 pts)', '❌');
+
+      if (lockStatus) {
+        lockStatus.className = 'lock-status-badge wrong';
+        lockStatus.innerHTML = `<span>❌</span> Wrong Answer (+0 points)`;
+        lockStatus.style.display = 'flex';
+      }
+    } else {
+      showToast("⏰ Time's up! (+0 pts)", '⌛');
+
+      if (lockStatus) {
+        lockStatus.className = 'lock-status-badge wrong';
+        lockStatus.innerHTML = `<span>⏰</span> Time's up! (+0 points)`;
+        lockStatus.style.display = 'flex';
+      }
+    }
+
+    // Always reveal the true correct answer in green for clarity
+    const correctBtn = document.getElementById(`option-btn-${currentQ.correctAnswer}`);
+    if (correctBtn) {
+      correctBtn.classList.add('correct');
+    }
   }
 
-  // Short delay for satisfying micro-interaction before advancing
-  setTimeout(() => {
+  // Show explanation if available
+  if (currentQ.explanation) {
+    const expBox = document.getElementById('q-explanation-box');
+    const expText = document.getElementById('q-explanation-text');
+    if (expBox && expText) {
+      expText.textContent = currentQ.explanation;
+      expBox.style.display = 'flex';
+    }
+  }
+
+  // Give participants 2 seconds to absorb result and explanation before advancing
+  clearTimeout(state.advanceTimeout);
+  state.advanceTimeout = setTimeout(() => {
     state.player.currentQIndex++;
     if (state.player.currentQIndex < state.questions.length) {
       renderCurrentQuestion();
     } else {
       submitParticipantQuiz();
     }
-  }, 650);
+  }, 2000);
 }
 
 // Keyboard shortcuts for answering (1,2,3,4 or A,B,C,D)
