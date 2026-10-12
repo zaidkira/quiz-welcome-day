@@ -16,6 +16,7 @@ const state = {
   // Local Participant State
   player: {
     registered: false,
+    started: false,
     name: '',
     avatar: '🚀',
     currentQIndex: 0,
@@ -326,7 +327,14 @@ function updateFullState(serverState) {
   state.startedAt = serverState.startedAt;
   state.endedAt = serverState.endedAt;
   state.timePerQuestion = serverState.timePerQuestion || 20;
-  state.questions = serverState.questions || [];
+
+  // Don't overwrite questions list while player is answering
+  if (!state.player.started || state.questions.length === 0) {
+    if (serverState.questions && serverState.questions.length > 0) {
+      state.questions = serverState.questions;
+    }
+  }
+
   state.leaderboard = serverState.leaderboard || [];
   state.totalParticipants = serverState.totalParticipants || 0;
 
@@ -444,15 +452,15 @@ function renderQuestionsCount() {
 
 // React to quiz status transitions (e.g. admin starts quiz)
 function handleStatusChangeReaction() {
-  // If player is registered and in waiting room, and quiz just started
-  if (state.player.registered && !state.player.completed) {
+  // Only trigger starting questions if player registered, was in waiting room, and hasn't started yet!
+  if (state.player.registered && !state.player.started && !state.player.completed) {
     if (state.status === 'active') {
       startParticipantQuizQuestions();
     } else if (state.status === 'not_started') {
       showQuizSubscreen('waiting');
-    } else if (state.status === 'ended') {
-      showToast('The Admin has closed this quiz session.', '🛑');
     }
+  } else if (state.player.registered && state.status === 'ended' && !state.player.completed) {
+    showToast('The Admin has closed this quiz session.', '🛑');
   }
 }
 
@@ -490,6 +498,7 @@ function handleJoinQuiz(e) {
 
   state.player.name = name;
   state.player.registered = true;
+  state.player.started = false;
   state.player.answers = [];
   state.player.questionStartTimes = [];
   state.player.questionDurations = [];
@@ -515,6 +524,8 @@ function handleJoinQuiz(e) {
 }
 
 function startParticipantQuizQuestions() {
+  if (state.player.started) return; // Prevent resetting while actively answering!
+  state.player.started = true;
   showQuizSubscreen('active');
   state.player.currentQIndex = 0;
   state.player.answers = [];
@@ -713,6 +724,7 @@ async function submitParticipantQuiz() {
 
     if (res.ok) {
       const data = await res.json();
+      state.player.started = false;
       state.player.completed = true;
       state.player.score = data.entry.score;
       state.player.detailedResults = data.detailedResults;
@@ -800,9 +812,11 @@ function toggleAnswerReview() {
 
 function restartParticipantQuiz() {
   SoundFX.click();
+  state.player.started = false;
   state.player.completed = false;
   state.player.score = 0;
   state.player.answers = [];
+  state.player.currentQIndex = 0;
   showQuizSubscreen('join');
 }
 
