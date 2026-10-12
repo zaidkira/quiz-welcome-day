@@ -281,7 +281,16 @@ app.use(express.static(path.join(__dirname, 'public')));
 // QR code generation endpoint
 app.get('/api/qr', async (req, res) => {
   const localIp = getLocalIP();
-  const url = `http://${localIp}:${PORT}`;
+  const host = req.get('host');
+  const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+  let url = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL;
+  if (!url) {
+    if (host && !host.includes('localhost') && !host.includes('127.0.0.1')) {
+      url = `${proto}://${host}`;
+    } else {
+      url = `http://${localIp}:${PORT}`;
+    }
+  }
   try {
     const qrDataUrl = await QRCode.toDataURL(url, {
       margin: 1,
