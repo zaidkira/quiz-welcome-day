@@ -92,8 +92,10 @@ async function createTablesIfNotExist() {
         time_limit INT DEFAULT 20,
         explanation TEXT DEFAULT '',
         order_index INT DEFAULT 0,
+        is_double_points BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
+      ALTER TABLE quiz_questions ADD COLUMN IF NOT EXISTS is_double_points BOOLEAN DEFAULT FALSE;
     `);
 
     // 3. Submissions table
@@ -178,7 +180,8 @@ async function loadQuestionsFromDb() {
         options: Array.isArray(r.options) ? r.options : JSON.parse(r.options),
         correctAnswer: r.correct_answer,
         timeLimit: r.time_limit,
-        explanation: r.explanation || ''
+        explanation: r.explanation || '',
+        isDoublePoints: !!r.is_double_points
       }));
     }
   } catch (err) {
@@ -198,15 +201,16 @@ async function saveQuestionsToDb(questions) {
       for (let i = 0; i < questions.length; i++) {
         const q = questions[i];
         await client.query(`
-          INSERT INTO quiz_questions (question, options, correct_answer, time_limit, explanation, order_index)
-          VALUES ($1, $2, $3, $4, $5, $6)
+          INSERT INTO quiz_questions (question, options, correct_answer, time_limit, explanation, order_index, is_double_points)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
         `, [
           q.question,
           JSON.stringify(q.options),
           q.correctAnswer || 0,
           q.timeLimit || 20,
           q.explanation || '',
-          i
+          i,
+          !!q.isDoublePoints
         ]);
       }
 

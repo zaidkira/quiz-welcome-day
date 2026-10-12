@@ -550,6 +550,12 @@ function renderCurrentQuestion() {
   // Question Title
   document.getElementById('q-question-text').textContent = currentQ.question;
 
+  // Double Points Banner
+  const doubleBanner = document.getElementById('q-double-banner');
+  if (doubleBanner) {
+    doubleBanner.style.display = currentQ.isDoublePoints ? 'inline-flex' : 'none';
+  }
+
   // Hide explanation box
   const explanationBox = document.getElementById('q-explanation-box');
   if (explanationBox) explanationBox.style.display = 'none';
@@ -619,18 +625,37 @@ function selectOption(optIndex, isTimeout = false) {
   buttons.forEach(b => b.disabled = true);
 
   const qIndex = state.player.currentQIndex;
+  const currentQ = state.questions[qIndex];
   const startTime = state.player.questionStartTimes[qIndex] || Date.now();
   const durationSec = Math.max(1, Math.round((Date.now() - startTime) / 1000));
   state.player.questionDurations[qIndex] = durationSec;
-
   state.player.answers[qIndex] = optIndex;
+
+  const timeLimit = (currentQ && currentQ.timeLimit) || state.timePerQuestion || 20;
 
   if (optIndex >= 0) {
     SoundFX.select();
     const selectedBtn = document.getElementById(`option-btn-${optIndex}`);
     if (selectedBtn) selectedBtn.classList.add('selected');
+
+    // Dynamic live score calculation & micro-feedback
+    const isDouble = !!(currentQ && currentQ.isDoublePoints);
+    const multiplier = isDouble ? 2 : 1;
+    const speedRatio = Math.max(0, (timeLimit - durationSec) / timeLimit);
+    const pts = Math.round((500 + 500 * speedRatio) * multiplier);
+
+    state.player.score += pts;
+    const scoreEl = document.getElementById('q-player-score');
+    if (scoreEl) scoreEl.textContent = state.player.score;
+
+    if (isDouble) {
+      showToast(`🔥 +${pts} pts (2X DOUBLE POINTS!)`, '⚡');
+    } else if (speedRatio >= 0.5) {
+      showToast(`⚡ +${pts} pts (Fast Answer: ${durationSec}s!)`, '🎯');
+    }
   } else {
     SoundFX.wrong();
+    showToast("⏰ Time's up for this question!", '⌛');
   }
 
   // Short delay for satisfying micro-interaction before advancing
@@ -641,7 +666,7 @@ function selectOption(optIndex, isTimeout = false) {
     } else {
       submitParticipantQuiz();
     }
-  }, 750);
+  }, 650);
 }
 
 // Keyboard shortcuts for answering (1,2,3,4 or A,B,C,D)
@@ -676,6 +701,7 @@ async function submitParticipantQuiz() {
       name: state.player.name,
       avatar: state.player.avatar,
       answers: state.player.answers,
+      durations: state.player.questionDurations,
       totalTimeSec
     };
 
@@ -745,10 +771,14 @@ function populateAnswersReview(detailedResults) {
 
     const chosenText = item.chosen !== -1 && state.questions[idx]?.options[item.chosen] ? state.questions[idx].options[item.chosen] : 'No answer selected (Timed out)';
     const correctText = state.questions[idx]?.options[item.correct] || 'Correct answer';
+    const ptsBadge = item.isCorrect 
+      ? `<span style="font-family:var(--font-mono); font-weight:bold; color:${item.isDoublePoints ? '#fbbf24' : '#34d399'}; font-size:0.85rem;">+${item.pointsEarned} pts ⏱️ ${item.duration}s${item.isDoublePoints ? ' 🔥 2X' : ''}</span>`
+      : `<span style="font-family:var(--font-mono); font-weight:bold; color:#fb7185; font-size:0.85rem;">+0 pts</span>`;
 
     div.innerHTML = `
-      <div style="font-weight:700; color:#fff; margin-bottom:6px;">
-        ${item.isCorrect ? '✅' : '❌'} Q${idx + 1}: ${item.question}
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; flex-wrap:wrap; gap:6px;">
+        <span style="font-weight:700; color:#fff;">${item.isCorrect ? '✅' : '❌'} Q${idx + 1}: ${item.question}</span>
+        ${ptsBadge}
       </div>
       <div style="font-size:0.9rem; color:${item.isCorrect ? '#34d399' : '#fb7185'};">
         Your Answer: <strong>${chosenText}</strong>
@@ -1103,12 +1133,30 @@ function renderAdminQuestionsEditor(questions) {
       <div class="accordion-header" onclick="toggleAccordion(this)">
         <div class="accordion-title">
           <span class="q-badge">#${qIdx + 1}</span>
-          <span class="q-title-text">${escapeHtml(q.question.slice(0, 55))}${q.question.length > 55 ? '...' : ''}</span>
+          <span class="q-title-text">${escapeHtml(q.question.slice(0, 50))}${q.question.length > 50 ? '...' : ''}</span>
           <span class="q-correct-tag">Correct: Option ${optionLetters[q.correctAnswer || 0]}</span>
+          ${q.isDoublePoints ? '<span class="q-double-tag">🔥 2X POINTS</span>' : ''}
         </div>
         <span class="accordion-arrow">▼</span>
       </div>
       <div class="accordion-body">
+        <div class="double-points-toggle-row ${q.isDoublePoints ? 'active' : ''}">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-size:1.4rem;">🔥</span>
+            <div>
+              <strong style="color:${q.isDoublePoints ? '#fbbf24' : '#cbd5e1'}; font-size:0.9rem;">
+                ${q.isDoublePoints ? 'Double Points (2X Multiplier Active)' : 'Standard Points (1X Multiplier)'}
+              </strong>
+              <p style="font-size:0.78rem; color:var(--text-muted); margin:0;">
+                ${q.isDoublePoints ? 'Participants earn double points (up to 2,000 pts) for answering this question fast!' : 'Standard scoring (up to 1,000 pts based on answer speed).'}
+              </p>
+            </div>
+          </div>
+          <button type="button" class="cyber-btn ${q.isDoublePoints ? 'btn-double-on' : 'btn-secondary'}" onclick="toggleQuestionDoublePoints(${qIdx})">
+            ${q.isDoublePoints ? '🔥 2X ACTIVE (Click to Turn Off)' : '⚡ Make 2X Double Points'}
+          </button>
+        </div>
+
         <div class="input-group">
           <label class="input-label">Question Text</label>
           <input type="text" class="cyber-input q-text-input" data-qidx="${qIdx}" value="${escapeHtml(q.question)}" placeholder="Enter question text">
@@ -1142,6 +1190,17 @@ function renderAdminQuestionsEditor(questions) {
 
     container.appendChild(item);
   });
+}
+
+function toggleQuestionDoublePoints(qIdx) {
+  SoundFX.click();
+  collectQuestionInputsFromDOM();
+  if (state.admin.questionsCache[qIdx]) {
+    state.admin.questionsCache[qIdx].isDoublePoints = !state.admin.questionsCache[qIdx].isDoublePoints;
+  }
+  renderAdminQuestionsEditor(state.admin.questionsCache);
+  const statusTxt = state.admin.questionsCache[qIdx].isDoublePoints ? 'ACTIVATED (2X) 🔥' : 'TURNED OFF (1X) ⚡';
+  showToast(`Question #${qIdx + 1} Double Points ${statusTxt}`, '🔥');
 }
 
 function toggleAccordion(headerEl) {

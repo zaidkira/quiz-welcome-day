@@ -132,6 +132,7 @@ const DEFAULT_QUESTIONS = [
     ],
     correctAnswer: 2,
     timeLimit: 20,
+    isDoublePoints: true,
     explanation: "JavaScript is the programming language that enables interactive web experiences."
   },
   {
@@ -145,6 +146,7 @@ const DEFAULT_QUESTIONS = [
     ],
     correctAnswer: 0,
     timeLimit: 20,
+    isDoublePoints: true,
     explanation: "In 1947, engineers found a real moth trapped in the Harvard Mark II computer and taped it into their logbook!"
   },
   {
@@ -158,6 +160,7 @@ const DEFAULT_QUESTIONS = [
     ],
     correctAnswer: 1,
     timeLimit: 20,
+    isDoublePoints: true,
     explanation: "Joining the WF Club gives you hands-on workshops, team hackathons, and great friends!"
   }
 ];
@@ -255,7 +258,8 @@ function getSanitizedQuestions() {
     id: q.id,
     question: q.question,
     options: q.options,
-    timeLimit: q.timeLimit || quizState.timePerQuestion
+    timeLimit: q.timeLimit || quizState.timePerQuestion,
+    isDoublePoints: !!q.isDoublePoints
   }));
 }
 
@@ -487,7 +491,13 @@ async function executeAdminAction(action, payload) {
       const simAvatar = payload?.avatar || avatars[Math.floor(Math.random() * avatars.length)];
       const simCorrect = Math.floor(Math.random() * 4) + 7; // 7 to 10
       const simTime = Math.floor(Math.random() * 25) + 18; // 18 to 43s
-      const simScore = (simCorrect * 100) + Math.max(10, Math.floor(100 - (simTime / 10) * 2) * simCorrect);
+      const avgDuration = simTime / quizState.questions.length;
+      let simScore = 0;
+      quizState.questions.slice(0, simCorrect).forEach((q) => {
+        const mult = q.isDoublePoints ? 2 : 1;
+        const speedRatio = Math.max(0.1, (20 - avgDuration) / 20);
+        simScore += Math.round((500 + 500 * speedRatio) * mult);
+      });
 
       const simEntry = {
         id: 'p_sim_' + Date.now(),
@@ -529,7 +539,7 @@ app.post('/api/admin/action', async (req, res) => {
 
 // REST submit result
 app.post('/api/submit', async (req, res) => {
-  const { name, avatar, answers, totalTimeSec } = req.body;
+  const { name, avatar, answers, durations, totalTimeSec } = req.body;
   if (quizState.status !== 'active') {
     return res.status(400).json({ error: 'Quiz is not active.' });
   }
@@ -537,37 +547,59 @@ app.post('/api/submit', async (req, res) => {
     return res.status(400).json({ error: 'Invalid submission data.' });
   }
 
-  // Calculate score & accuracy
+  // Calculate score & accuracy with speed bonus and double points
   let correctCount = 0;
-  let score = 0;
+  let totalScore = 0;
   const detailedResults = [];
 
   quizState.questions.forEach((q, idx) => {
     const participantAns = answers[idx];
+    const timeLimit = q.timeLimit || quizState.timePerQuestion || 20;
+    const duration = Array.isArray(durations) && durations[idx] !== undefined 
+      ? Number(durations[idx]) 
+      : (totalTimeSec ? Math.round(totalTimeSec / quizState.questions.length) : timeLimit);
+    
     const isCorrect = participantAns !== undefined && participantAns === q.correctAnswer;
+    const isDouble = !!q.isDoublePoints;
+    const multiplier = isDouble ? 2 : 1;
+
+    let pointsEarned = 0;
     if (isCorrect) {
       correctCount++;
-      const speedBonus = Math.max(10, Math.floor(100 - (totalTimeSec / quizState.questions.length) * 2));
-      score += 100 + speedBonus;
+      // Speed bonus: answering faster awards more points (Kahoot-style)
+      const clampedDuration = Math.max(0.5, Math.min(timeLimit, duration));
+      const speedRatio = Math.max(0, (timeLimit - clampedDuration) / timeLimit);
+      const basePoints = 500;
+      const speedBonus = Math.round(500 * speedRatio);
+      pointsEarned = (basePoints + speedBonus) * multiplier;
+      totalScore += pointsEarned;
     }
+
     detailedResults.push({
       questionId: q.id,
       question: q.question,
       chosen: participantAns,
       correct: q.correctAnswer,
       isCorrect,
+      isDoublePoints: isDouble,
+      duration: Math.round(duration),
+      pointsEarned,
       explanation: q.explanation || ''
     });
   });
+
+  const calculatedTotalTime = Array.isArray(durations) && durations.length > 0
+    ? durations.reduce((a, b) => a + Number(b || 0), 0)
+    : (Number(totalTimeSec) || 0);
 
   const entry = {
     id: 'p_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
     name: name.trim().slice(0, 30),
     avatar: avatar || '🚀',
-    score,
+    score: totalScore,
     correctCount,
     totalQuestions: quizState.questions.length,
-    totalTimeSec: Number(totalTimeSec) || 0,
+    totalTimeSec: calculatedTotalTime,
     submittedAt: new Date().toISOString()
   };
 

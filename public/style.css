@@ -687,6 +687,35 @@ main.main-container {
   box-shadow: 0 0 12px var(--electric-cyan);
 }
 
+.double-points-banner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(239, 68, 68, 0.25) 100%);
+  border: 1.5px solid rgba(245, 158, 11, 0.7);
+  color: #fbbf24;
+  padding: 6px 18px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  font-size: 0.88rem;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  margin-bottom: 16px;
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.35);
+  animation: pulseDouble 2s infinite ease-in-out;
+}
+
+@keyframes pulseDouble {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 16px rgba(245, 158, 11, 0.35);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow: 0 0 24px rgba(239, 68, 68, 0.6);
+  }
+}
+
 .question-title {
   font-family: var(--font-display);
   font-size: 1.45rem;
@@ -1396,6 +1425,51 @@ main.main-container {
 
 .option-badge.correct {
   color: #34d399;
+}
+
+/* Double Points in Admin */
+.double-points-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: rgba(14, 22, 38, 0.6);
+  border: 1px solid rgba(56, 189, 248, 0.15);
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 10px;
+  transition: all 0.2s ease;
+}
+
+.double-points-toggle-row.active {
+  background: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.5);
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.15);
+}
+
+.cyber-btn.btn-double-on {
+  background: linear-gradient(135deg, #f59e0b 0%, #ea580c 100%);
+  border-color: #fbbf24;
+  color: #040814;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.4);
+}
+.cyber-btn.btn-double-on:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.q-double-tag {
+  font-size: 0.78rem;
+  font-family: var(--font-mono);
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.6);
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
 }
 
 /* Cyber Buttons */

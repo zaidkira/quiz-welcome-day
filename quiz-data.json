@@ -8,7 +8,7 @@
   "adminPassword": "7nahomawaves",
   "questions": [
     {
-      "id": 11,
+      "id": 21,
       "question": "What is the primary vision of WF Club?",
       "options": [
         "Web & Future Tech",
@@ -18,10 +18,11 @@
       ],
       "correctAnswer": 0,
       "timeLimit": 15,
-      "explanation": ""
+      "explanation": "",
+      "isDoublePoints": false
     },
     {
-      "id": 12,
+      "id": 22,
       "question": "Which data structure operates on a 'Last In, First Out' (LIFO) principle?",
       "options": [
         "Queue",
@@ -31,10 +32,11 @@
       ],
       "correctAnswer": 0,
       "timeLimit": 20,
-      "explanation": ""
+      "explanation": "",
+      "isDoublePoints": false
     },
     {
-      "id": 13,
+      "id": 23,
       "question": "What year was the World Wide Web introduced to the public by Tim Berners-Lee?",
       "options": [
         "1985",
@@ -44,10 +46,11 @@
       ],
       "correctAnswer": 0,
       "timeLimit": 20,
-      "explanation": ""
+      "explanation": "",
+      "isDoublePoints": false
     },
     {
-      "id": 14,
+      "id": 24,
       "question": "In programming, what does the acronym 'API' stand for?",
       "options": [
         "Application Programming Interface",
@@ -57,10 +60,11 @@
       ],
       "correctAnswer": 0,
       "timeLimit": 20,
-      "explanation": ""
+      "explanation": "",
+      "isDoublePoints": false
     },
     {
-      "id": 15,
+      "id": 25,
       "question": "Which of the following is NOT an open-source operating system?",
       "options": [
         "Ubuntu Linux",
@@ -70,10 +74,11 @@
       ],
       "correctAnswer": 0,
       "timeLimit": 20,
-      "explanation": ""
+      "explanation": "",
+      "isDoublePoints": false
     },
     {
-      "id": 16,
+      "id": 26,
       "question": "What is the primary purpose of joining our club during Open Day?",
       "options": [
         "Hands-on projects & workshops",
@@ -83,10 +88,11 @@
       ],
       "correctAnswer": 0,
       "timeLimit": 20,
-      "explanation": ""
+      "explanation": "",
+      "isDoublePoints": false
     },
     {
-      "id": 17,
+      "id": 27,
       "question": "What does 'AI' stand for in modern computing?",
       "options": [
         "Automated Intelligence",
@@ -96,10 +102,11 @@
       ],
       "correctAnswer": 0,
       "timeLimit": 20,
-      "explanation": ""
+      "explanation": "",
+      "isDoublePoints": false
     },
     {
-      "id": 18,
+      "id": 28,
       "question": "In web development, which language is primarily responsible for page interactivity?",
       "options": [
         "HTML",
@@ -109,10 +116,11 @@
       ],
       "correctAnswer": 0,
       "timeLimit": 20,
-      "explanation": ""
+      "explanation": "",
+      "isDoublePoints": true
     },
     {
-      "id": 19,
+      "id": 29,
       "question": "What is a 'Bug' in computer programming famously named after?",
       "options": [
         "A real moth trapped in a relay of the Mark II computer in 1947",
@@ -122,10 +130,11 @@
       ],
       "correctAnswer": 0,
       "timeLimit": 20,
-      "explanation": ""
+      "explanation": "",
+      "isDoublePoints": true
     },
     {
-      "id": 20,
+      "id": 30,
       "question": "What is the best way to level up your tech skills this semester?",
       "options": [
         "Watching random tutorials alone without coding",
@@ -135,7 +144,8 @@
       ],
       "correctAnswer": 0,
       "timeLimit": 20,
-      "explanation": ""
+      "explanation": "",
+      "isDoublePoints": true
     }
   ],
   "leaderboard": [],
